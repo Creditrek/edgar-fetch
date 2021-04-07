@@ -228,7 +228,7 @@ def download_and_save_filing(download_folder,
     save_path.parent.mkdir(parents=True, exist_ok=True)
     save_path.write_bytes(filing_text)
 
-    # Prevent rate limiting
+    # Prevent rate limiting when downloading
     time.sleep(SEC_EDGAR_RATE_LIMIT_SLEEP_INTERVAL)
 
 

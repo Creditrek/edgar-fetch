@@ -203,7 +203,7 @@ class Fetcher:
             after,
             before,
             are_amends_included,
-            query,
+            query
         )
 
         download_filings(
@@ -211,7 +211,7 @@ class Fetcher:
             ticker_or_cik,
             filing,
             filings_to_fetch,
-            has_download_details,
+            has_download_details
         )
 
         # Get the number of unique number of filings to be downloaded
