@@ -14,7 +14,7 @@ DATE_FORMAT_TOKENS = "%Y-%m-%d"
 DEFAULT_BEFORE_DATE = date.today()
 DEFAULT_AFTER_DATE = date(2000, 1, 1)
 
-ROOT_SAVE_FOLDER_NAME = "sec-edgar-filings"
+ROOT_SAVE_FOLDER_NAME = "individual-company-data"
 FILING_FULL_SUBMISSION_FILENAME = "full-submission.txt"
 # Extension will vary based on form (e.g. form 4 is XML, 8-K is HTML)
 FILING_DETAILS_FILENAME_STEM = "filing-details"

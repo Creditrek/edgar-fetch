@@ -10,6 +10,7 @@ import sys
 import multiprocessing
 import shutil
 from typing import ClassVar, List
+import glob
 
 import requests
 
@@ -142,7 +143,17 @@ class Fetcher:
 
         print("Downloading of all requested SEC filings complete.")
 
-    def get_company(self, data_folder, filing, ticker_or_cik, 
+
+    def unzip_files(self):
+        if not str(self.data_folder).endswith("/"):
+            data_folder_str = str(self.data_folder) + "/"
+        else:
+            data_folder_str = str(self.data_folder)
+        for fullname in glob.glob(data_folder_str + "*.zip"):
+            print(fullname)
+            shutil.unpack_archive(fullname, fullname[:-4])
+
+    def get_company(self, filing, ticker_or_cik, *, 
                     count_of_filings=None, after=None, before=None,
                     are_amends_included=False,
                     has_download_details=True,
@@ -152,8 +163,8 @@ class Fetcher:
         """
         ticker_or_cik = str(ticker_or_cik).strip().upper()
 
-        if not os.path.exists(data_folder):
-            os.makedirs(data_folder)
+        # if not os.path.exists(self.data_folder):
+        #     os.makedirs(self.data_folder)
         
         if count_of_filings is None:
             count_of_filings = sys.maxsize
@@ -182,19 +193,19 @@ class Fetcher:
 
         if after > before:
             raise ValueError(
-                "Invalid after and before date combination. "
-                "Please enter an after date that is less than the before date."
+                f"Invalid after and before date combination.\n"
+                f"Please enter an after date that is less than the before date."
             )
 
         if filing not in _SUPPORTED_FILINGS:
             filing_options = ", ".join(self.supported_filings)
             raise ValueError(
-                f"{filing} filings are not supported. "
+                f"{filing} filings are not supported.\n"
                 f"Please choose from the following: {filing_options}."
             )
 
         if not isinstance(query, str):
-            raise TypeError("Query must be of type string.")
+            raise TypeError("Query type must be string.")
         
         filings_to_fetch = get_filing_urls_to_download(
             filing,
@@ -207,7 +218,7 @@ class Fetcher:
         )
 
         download_filings(
-            data_folder,
+            self.data_folder,
             ticker_or_cik,
             filing,
             filings_to_fetch,
