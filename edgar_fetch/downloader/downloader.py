@@ -47,7 +47,7 @@ def _generate_quarterly_idx_list(since, before):
     since 1993 until the previous quarter.
     """
     # logging.info(f"Downloading SEC filings since {since}.")
-    print(f"Downloading SEC filings since {since}.")
+    print(f"Downloading SEC filings since {since} but before {before}.")
     years = range(since, before)
     quarters = ["q1", "q2", "q3", "q4"]
     history = [(y, q) for y in years for q in quarters]
@@ -63,8 +63,6 @@ def _generate_quarterly_idx_list(since, before):
     #         history.pop(0)
 
     url_list = [(DERA_URL, f"/{x[0]}{x[1]}.zip") for x in history]
-
-    print(url_list)
 
     return url_list
 
@@ -97,17 +95,14 @@ def _download(file, data_folder, is_file_skipped):
 
     target_directory = os.path.join(data_folder, file[1][1:-4])
     print(target_directory)
-    
-    if not os.path.exists(target_directory):
-        os.mkdir(target_directory, 755)
-    else:
-        pass
 
+    target_file = os.path.join(data_folder, file[1][1:])
+    
     # The raw files downloaded will be zipped files, hence need handling with more care. 
     res = requests.get(url_path, stream=True)
     print(res.status_code)
 
-    handle = open(data_folder + file[1][1:], "wb")
+    handle = open(target_file, "wb")
     for chunk in res.iter_content():
         if chunk:  # To filter out keep-alive new chunks
             handle.write(chunk)
@@ -135,14 +130,15 @@ class Fetcher:
         worker_count = _count_worker()
         print(f"Number of workers running in parallel: {worker_count}")
 
-        pool = multiprocessing.Pool(worker_count)
+        # pool = multiprocessing.Pool(worker_count)
 
         for file in files:
             is_file_skipped = is_all_present_except_last_skipped
-            pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
+            # pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
+            _download(file, self.data_folder, is_file_skipped)
 
-        pool.close()  # reject any new tasks
-        pool.join()  # wait for the completion of all scheduled jobs
+        # pool.close()  # reject any new tasks
+        # pool.join()  # wait for the completion of all scheduled jobs
 
         print("Downloading of all requested SEC filings complete.")
 
