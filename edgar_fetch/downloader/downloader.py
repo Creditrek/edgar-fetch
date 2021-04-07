@@ -62,7 +62,7 @@ def _generate_quarterly_idx_list(since, before):
     #     else:
     #         history.pop(0)
 
-    url_list = [(DERA_URL[:-5], f"/{x[0]}{x[1]}.zip") for x in history]
+    url_list = [(DERA_URL, f"/{x[0]}{x[1]}.zip") for x in history]
 
     print(url_list)
 
@@ -92,20 +92,26 @@ def _download(file, data_folder, is_file_skipped):
     when skip_file is True; it will skip the file if it's already present.
     """
 
-    url_path = file[0] + file[1]
+    url_path = file[0][:-5] + file[1]
     print(url_path)
 
-    local_directory_path = os.path.join(data_folder, file[1][1:-4])
-    print(local_directory_path)
+    target_directory = os.path.join(data_folder, file[1][1:-4])
+    print(target_directory)
     
-    if not os.path.exists(local_directory_path):
-        os.mkdir(local_directory_path, 777)
+    if not os.path.exists(target_directory):
+        os.mkdir(target_directory, 755)
+    else:
+        pass
 
     # The raw files downloaded will be zipped files, hence need handling with more care. 
     res = requests.get(url_path, stream=True)
     print(res.status_code)
-    z = zipfile.ZipFile(io.BytesIO(res.content))
-    z.extractall(local_directory_path)
+
+    handle = open(data_folder + file[1][1:], "wb")
+    for chunk in res.iter_content():
+        if chunk:  # To filter out keep-alive new chunks
+            handle.write(chunk)
+    handle.close()
 
 
 class Fetcher:
