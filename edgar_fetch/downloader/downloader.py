@@ -87,7 +87,7 @@ def _request_url(url):
 
 def _download(file, data_folder, is_file_skipped):
     """
-    Download an idx archive from EDGAR.
+    Download an archive from DERA.
     This will read idx files and unzip archives and read the master.idx file inside
     when skip_file is True; it will skip the file if it's already present.
     """
@@ -99,13 +99,13 @@ def _download(file, data_folder, is_file_skipped):
     print(local_directory_path)
     
     if not os.path.exists(local_directory_path):
-        os.mkdir(local_directory_path, 755)
+        os.mkdir(local_directory_path, 777)
 
     # The raw files downloaded will be zipped files, hence need handling with more care. 
     res = requests.get(url_path, stream=True)
-    with res as r:
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(local_directory_path)
+    print(res.status_code)
+    z = zipfile.ZipFile(io.BytesIO(res.content))
+    z.extractall(local_directory_path)
 
 
 class Fetcher:
@@ -133,7 +133,7 @@ class Fetcher:
 
         for file in files:
             is_file_skipped = is_all_present_except_last_skipped
-            _download(file, self.data_folder, is_file_skipped)
+            pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
 
         pool.close()  # reject any new tasks
         pool.join()  # wait for the completion of all scheduled jobs
