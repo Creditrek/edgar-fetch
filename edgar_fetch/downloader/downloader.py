@@ -3,11 +3,11 @@ import io
 import datetime
 import zipfile
 import tempfile
-import logging
+# import logging
 import sys
 import multiprocessing
 import shutil
-from typing import ClassVar, List #, Optional, Union
+from typing import ClassVar, List
 
 import requests
 
@@ -43,7 +43,8 @@ def _generate_quarterly_idex_list(since=1993):
     Generate a list of quarterly zip files as archived in EDGAR
     since 1993 until the previous quarter.
     """
-    logging.info(f"Downloading SEC filings since {since}.")
+    # logging.info(f"Downloading SEC filings since {since}.")
+    print(f"Downloading SEC filings since {since}.")
     years = range(since, datetime.date.today().year + 1)
     quarters = ["QTR1", "QTR2", "QTR3", "QTR4"]
     history = [(y, q) for y in years for q in quarters]
@@ -95,8 +96,10 @@ def _download(file, destination, is_file_skipped):
     dest2 = file[1]
 
     if is_file_skipped and os.path.exists(dest1 + dest2):
-        logging.info(f"Skipping {dest2}")
-        return
+        # logging.info(f"Skipping {dest2}")
+        # return
+        print(f"Skipping {dest2}")
+        
 
     if url.endswith("zip"):
         with tempfile.TemporaryFile(mode="w+b") as tmp:
@@ -109,9 +112,10 @@ def _download(file, destination, is_file_skipped):
                         lambda line: _append_txt_with_html_suffix(line), lines.splitlines()
                     )
                     idex_file.write("\n".join(lines)+"\n")
-                    logging.info(f"Downloaded {url} to {dest1}{dest2}")
+                    # logging.info(f"Downloaded {url} to {dest1}{dest2}")
+                    print(f"Downloaded {url} to {dest1}{dest2}")
     else:
-        raise logging.error("Please note edgar-fetch currently only supports zipped index files.")
+        raise Exception("Please note edgar-fetch currently only supports zipped index files.")
 
 
 class Fetcher:
@@ -129,10 +133,12 @@ class Fetcher:
             os.makedirs(destination)
 
         files = _generate_quarterly_idex_list(since)
-        logging.info(f"A total of {len(files)} files to be retrieved.")
+        # logging.info(f"A total of {len(files)} files to be retrieved.")
+        print(f"A total of {len(files)} files to be retrieved.")
 
         worker_count = _count_worker()
-        logging.info(f"Number of workers running in parallel: {worker_count}")
+        # logging.info(f"Number of workers running in parallel: {worker_count}")
+        print(f"Number of workers running in parallel: {worker_count}")
 
         with multiprocessing.Pool(worker_count) as pool:
 
@@ -140,7 +146,8 @@ class Fetcher:
                 is_file_skipped = is_all_present_except_last_skipped
                 pool.apply_async(_download, (file, destination, is_file_skipped))
 
-        logging.info("Download of all SEC filings complete.")
+        # logging.info("Download of all SEC filings complete.")
+        print("Download of all SEC filings complete.")
 
     def get_indexed(self, destination, filing, ticker_or_cik, 
                     count_of_filings=None, after=None, before=None,
