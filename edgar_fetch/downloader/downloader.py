@@ -1,9 +1,11 @@
 import os
 import io
+import urllib
+import json
+from pathlib import Path
 import datetime
 import zipfile
 import tempfile
-# import logging
 import sys
 import multiprocessing
 import shutil
@@ -22,6 +24,7 @@ from .utils import (download_filings,
 EDGAR_PREFIX = "https://www.sec.gov/Archives/"
 SEP = "|"
 
+DERA_URL= "https://www.sec.gov/files/dera/data/financial-statement-data-sets.html"
 
 def _count_worker():
     count_of_cpu = 1
@@ -35,39 +38,40 @@ def _count_worker():
 
 
 def _get_current_quarter():
-    return f"QTR{((datetime.date.today().month - 1) // 3 + 1)}s"
+    return f"QTR{((datetime.date.today().month - 1) // 3 + 1)}"
 
 
-def _generate_quarterly_idex_list(since=1993):
+def _generate_quarterly_idx_list(since, before):
     """
     Generate a list of quarterly zip files as archived in EDGAR
     since 1993 until the previous quarter.
     """
     # logging.info(f"Downloading SEC filings since {since}.")
     print(f"Downloading SEC filings since {since}.")
-    years = range(since, datetime.date.today().year + 1)
-    quarters = ["QTR1", "QTR2", "QTR3", "QTR4"]
+    years = range(since, before)
+    quarters = ["q1", "q2", "q3", "q4"]
     history = [(y, q) for y in years for q in quarters]
     history.reverse()
 
-    quarter = _get_current_quarter()
+    # quarter = _get_current_quarter()
 
-    while history:
-        _, q = history[0]
-        if q == quarter:
-            break
-        else:
-            history.pop(0)
+    # while history:
+    #     _, q = history[0]
+    #     if q == quarter:
+    #         break
+    #     else:
+    #         history.pop(0)
 
-    return [(
-            f"{EDGAR_PREFIX} edgar/full-index/{x[0]}/{x[1]}/master.zip",
-            f"{x[0]}-{x[1]}.tsv"
-            ) for x in history]
+    url_list = [(DERA_URL[:-5], f"/{x[0]}{x[1]}.zip") for x in history]
+
+    print(url_list)
+
+    return url_list
 
 
-def _append_txt_with_html_suffix(line):
-    chunks = line.split(SEP)
-    return line + SEP + chunks[-1].replace(".txt", "-index.html")
+# def _append_txt_with_html_suffix(line):
+#     chunks = line.split(SEP)
+#     return line + SEP + chunks[-1].replace(".txt", "-index.html")
 
 
 def _skip_header(file):
@@ -76,80 +80,67 @@ def _skip_header(file):
 
 
 def _request_url(url):
+    with requests.get(url).text as r:
+        with tempfile.NamedTemporaryFile() as fp:
+            shutil.copyfileobj(r, fp)
 
-    with requests.get(url) as r:
-        with tempfile.NamedTemporaryFile(delete=False) as t:
-            shutil.copyfileobj(r, t)
 
-
-def _download(file, destination, is_file_skipped):
+def _download(file, data_folder, is_file_skipped):
     """
-    Download an idx archive from EDGAR
-    This will read idx files and unzip
-    archives + read the master.idx file inside
-    when skip_file is True, it will skip the file if it's already present.
+    Download an idx archive from EDGAR.
+    This will read idx files and unzip archives and read the master.idx file inside
+    when skip_file is True; it will skip the file if it's already present.
     """
-    if not destination.endswith("/"):
-        dest1 = f"{destination}"
 
-    url = file[0]
-    dest2 = file[1]
+    url_path = file[0] + file[1]
+    print(url_path)
 
-    if is_file_skipped and os.path.exists(dest1 + dest2):
-        # logging.info(f"Skipping {dest2}")
-        # return
-        print(f"Skipping {dest2}")
-        
+    local_directory_path = os.path.join(data_folder, file[1][1:-4])
+    print(local_directory_path)
+    
+    if not os.path.exists(local_directory_path):
+        os.mkdir(local_directory_path, 755)
 
-    if url.endswith("zip"):
-        with tempfile.TemporaryFile(mode="w+b") as tmp:
-            tmp.write(_request_url(url))
-            with zipfile.ZipFile(tmp).open("master.idx") as z:
-                with io.open(dest1 + dest2, "w+", encoding="utf-8") as idex_file:
-                    _skip_header(z)
-                    lines = z.read().decode("latin-1")
-                    lines = map(
-                        lambda line: _append_txt_with_html_suffix(line), lines.splitlines()
-                    )
-                    idex_file.write("\n".join(lines)+"\n")
-                    # logging.info(f"Downloaded {url} to {dest1}{dest2}")
-                    print(f"Downloaded {url} to {dest1}{dest2}")
-    else:
-        raise Exception("Please note edgar-fetch currently only supports zipped index files.")
+    # The raw files downloaded will be zipped files, hence need handling with more care. 
+    res = requests.get(url_path, stream=True)
+    with res as r:
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        z.extractall(local_directory_path)
 
 
 class Fetcher:
-    supported_filings: ClassVar[List[str]] = sorted(_SUPPORTED_FILINGS)
+    supported_filings = sorted(_SUPPORTED_FILINGS)
 
-    def __init__(self):
-        pass
+    def __init__(self, data_folder):
+        if isinstance(data_folder, Path):
+            self.data_folder = data_folder
+        else:
+            self.data_folder = Path(data_folder).expanduser().resolve()
 
     # There will be only accessors and no mutators
-    def get_all(self, destination, since, is_all_present_except_last_skipped=False):
+    def get_all(self, since=2015, before=2021, is_all_present_except_last_skipped=False):
         """
         A method to download all files at once. 
         """
-        if not os.path.exists(destination):
-            os.makedirs(destination)
 
-        files = _generate_quarterly_idex_list(since)
-        # logging.info(f"A total of {len(files)} files to be retrieved.")
+        files = _generate_quarterly_idx_list(since, before)
         print(f"A total of {len(files)} files to be retrieved.")
 
         worker_count = _count_worker()
-        # logging.info(f"Number of workers running in parallel: {worker_count}")
         print(f"Number of workers running in parallel: {worker_count}")
 
-        with multiprocessing.Pool(worker_count) as pool:
+        pool = multiprocessing.Pool(worker_count)
 
-            for file in files:
-                is_file_skipped = is_all_present_except_last_skipped
-                pool.apply_async(_download, (file, destination, is_file_skipped))
+        for file in files:
+            is_file_skipped = is_all_present_except_last_skipped
+            _download(file, self.data_folder, is_file_skipped)
 
-        # logging.info("Download of all SEC filings complete.")
-        print("Download of all SEC filings complete.")
+        pool.close()  # reject any new tasks
+        pool.join()  # wait for the completion of all scheduled jobs
 
-    def get_indexed(self, destination, filing, ticker_or_cik, 
+        print("Downloading of all requested SEC filings complete.")
+
+    def get_company(self, data_folder, filing, ticker_or_cik, 
                     count_of_filings=None, after=None, before=None,
                     are_amends_included=False,
                     has_download_details=True,
@@ -159,8 +150,8 @@ class Fetcher:
         """
         ticker_or_cik = str(ticker_or_cik).strip().upper()
 
-        if not os.path.exists(destination):
-            os.makedirs(destination)
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
         
         if count_of_filings is None:
             count_of_filings = sys.maxsize
@@ -214,7 +205,7 @@ class Fetcher:
         )
 
         download_filings(
-            destination,
+            data_folder,
             ticker_or_cik,
             filing,
             filings_to_fetch,

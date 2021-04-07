@@ -100,13 +100,13 @@ def get_filing_urls_to_download(
         payload = form_request_payload(
             ticker_or_cik, [filing_type], after_date, before_date, start_index, query
         )
-        resp = requests.post(
+        res = requests.post(
             SEC_EDGAR_SEARCH_API_ENDPOINT,
             json=payload,
             headers=get_random_user_agent_header(),
         )
-        resp.raise_for_status()
-        search_query_results = resp.json()
+        res.raise_for_status()
+        search_query_results = res.json()
 
         if "error" in search_query_results:
             try:
@@ -207,9 +207,9 @@ def download_and_save_filing(download_folder,
                              save_filename,
                              resolve_urls=False,
                             ):
-    resp = requests.get(download_url, headers=get_random_user_agent_header())
-    resp.raise_for_status()
-    filing_text = resp.content
+    res = requests.get(download_url, headers=get_random_user_agent_header())
+    res.raise_for_status()
+    filing_text = res.content
 
     # Only resolve URLs in HTML files
     if resolve_urls and Path(save_filename).suffix == ".html":
