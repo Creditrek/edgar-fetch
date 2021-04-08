@@ -5,3 +5,4 @@ flake8==3.9.0
 beautifulsoup4==4.9.3
 Faker==8.0.0
 lxml==4.6.3
+asyncio==3.4.3
