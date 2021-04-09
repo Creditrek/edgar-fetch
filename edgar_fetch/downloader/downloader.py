@@ -105,8 +105,8 @@ def _download(file, data_folder, is_file_skipped):
 
     handle = open(target_file, "wb")
     for chunk in res.iter_content():
-        if chunk:  # To filter out keep-alive new chunks
-            handle.write(chunk)
+        # if chunk:  # To filter out keep-alive new chunks
+        handle.write(chunk)
     handle.close()
 
 
