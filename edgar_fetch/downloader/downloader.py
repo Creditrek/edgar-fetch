@@ -103,11 +103,9 @@ def _download(file, data_folder, is_file_skipped):
     res = requests.get(url_path, stream=True)
     print(res.status_code)
 
-    handle = open(target_file, "wb")
-    for chunk in res.iter_content():
-        # if chunk:  # To filter out keep-alive new chunks
-        handle.write(chunk)
-    handle.close()
+    with open(target_file, "wb") as handle:
+        for chunk in res.iter_content():
+            handle.write(chunk)
 
 
 class Fetcher:
