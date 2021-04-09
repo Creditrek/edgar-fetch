@@ -131,15 +131,15 @@ class Fetcher:
         worker_count = _count_worker()
         print(f"Number of workers running in parallel: {worker_count}")
 
-        # pool = multiprocessing.Pool(worker_count)
+        pool = multiprocessing.Pool(worker_count)
 
         for file in files:
             is_file_skipped = is_all_present_except_last_skipped
-            # pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
-            _download(file, self.data_folder, is_file_skipped)
+            pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
+            # _download(file, self.data_folder, is_file_skipped)
 
-        # pool.close()  # reject any new tasks
-        # pool.join()  # wait for the completion of all scheduled jobs
+        pool.close()  # reject any new tasks
+        pool.join()  # wait for the completion of all scheduled jobs
 
         print("Downloading of all requested SEC filings complete.")
 
