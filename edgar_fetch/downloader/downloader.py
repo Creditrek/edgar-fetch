@@ -13,7 +13,6 @@ from typing import ClassVar, List
 import glob
 
 import requests
-import asyncio
 
 from .constants import DATE_FORMAT_TOKENS, DEFAULT_AFTER_DATE, DEFAULT_BEFORE_DATE
 from .constants import SUPPORTED_FILINGS as _SUPPORTED_FILINGS
@@ -121,7 +120,7 @@ class Fetcher:
             self.data_folder = Path(data_folder).expanduser().resolve()
 
     # There will be only accessors and no mutators
-    async def get_all(self, since=2015, before=2021, is_all_present_except_last_skipped=False):
+    def get_all(self, since=2015, before=2021, is_all_present_except_last_skipped=False):
         """
         A method to download all files at once. 
         """
@@ -137,7 +136,7 @@ class Fetcher:
         for file in files:
             is_file_skipped = is_all_present_except_last_skipped
             # pool.apply_async(_download, (file, self.data_folder, is_file_skipped))
-            await _download(file, self.data_folder, is_file_skipped)
+            _download(file, self.data_folder, is_file_skipped)
 
         # pool.close()  # reject any new tasks
         # pool.join()  # wait for the completion of all scheduled jobs
